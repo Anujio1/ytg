@@ -44,7 +44,7 @@ export default function() {
       }
       if (!state.dbsync) {
 
-        const termsAccepted = confirm('Data will be automatically deleted after one week of inactivity.\nytify is not responsible for data loss.\n\nI Understand');
+        const termsAccepted = confirm('Data will be automatically deleted after one week of inactivity.\nSounDroid is not responsible for data loss.\n\nI Understand');
         if (termsAccepted) {
           const username = prompt('Enter Username :');
           if (username) {

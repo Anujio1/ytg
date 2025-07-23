@@ -9,10 +9,10 @@ import { notify } from "../lib/utils";
 const libraryActions = document.getElementById('libraryActions');
 const actionTemplate = html`
 <li>
-  <label id="importBtn" for="upload_ytify">
+  <label id="importBtn" for="upload_SounDroid">
     <i class="ri-import-line"></i>&nbsp;${i18n('library_import')}
   </label>
-  <input type="file" id="upload_ytify" @change=${importLibrary}/>
+  <input type="file" id="upload_SounDroid" @change=${importLibrary}/>
 </li>
 <li id="exportBtn" @click=${exportLibrary}>
   <i class="ri-export-line"></i>&nbsp;${i18n('library_export')}
@@ -51,7 +51,7 @@ async function importLibrary(e: FileEv) {
 
 function exportLibrary() {
   const link = document.createElement('a');
-  link.download = 'ytify_library.json';
+  link.download = 'SounDroid_library.json';
   link.href = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(getDB(), undefined, 2))}`;
   link.click();
 };

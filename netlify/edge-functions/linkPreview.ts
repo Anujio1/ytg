@@ -21,9 +21,9 @@ const keys = keysString.split(',');
   const thumbnail = `${music}https://i.ytimg.com/vi_webp/${id}/mqdefault.webp`;
   const newPage = page
     .replace('48-160kbps Opus YouTube Audio Streaming Web App.', data.channelTitle.replace(' - Topic', ''))
-    .replace('"ytify"', `"${data.title}"`)
+    .replace('"SounDroid"', `"${data.title}"`)
     .replace('ytify.pp.ua', `ytify.pp.ua?s=${id}`)
-    .replaceAll('/ytify_thumbnail_min.webp', thumbnail);
+    .replaceAll('/SounDroid_thumbnail_min.webp', thumbnail);
 
   return new Response(newPage, response);
 };

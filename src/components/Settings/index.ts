@@ -45,7 +45,7 @@ async function clearCache(_: Event | undefined = undefined) {
 
 function exportSettings() {
   const link = document.createElement('a');
-  link.download = 'ytify_settings.json';
+  link.download = 'SounDroid_settings.json';
   link.href = `data:text/json;charset=utf-8,${encodeURIComponent(localStorage.getItem('store') || '{}')}`;
   link.click();
 }

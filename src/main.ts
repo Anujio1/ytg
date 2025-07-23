@@ -1,5 +1,6 @@
 import './stylesheets/global.css';
 import './scripts/i18n';
+import './scripts/telegram';
 import './scripts/router';
 import './scripts/audioEvents';
 import './scripts/list';
@@ -26,6 +27,7 @@ addEventListener('DOMContentLoaded', async () => {
       document.documentElement.requestFullscreen();
   });
 
+  
   if (import.meta.env.PROD)
     await import('virtual:pwa-register').then(pwa => {
       const handleUpdate = pwa.registerSW({

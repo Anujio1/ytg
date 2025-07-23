@@ -140,7 +140,7 @@ export default async function fetchList(
   else {
     // replace string for youtube playlist link support
     store.list.url = url.replace('ts/', 't?list=');
-    document.title = group.name + ' - ytify';
+    document.title = group.name + ' - SounDroid';
 
     history.replaceState({}, '',
       location.origin + location.pathname +

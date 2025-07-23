@@ -11,7 +11,7 @@ export default async function(dialog: HTMLDialogElement) {
     `https://lrclib.net/api/get?track_name=${store.actionsMenu.title}&artist_name=${store.actionsMenu.author.slice(0, -8)}`,
     {
       headers: {
-        'Lrclib-Client': `ytify ${Build} (https://github.com/n-ce/ytify)`
+        'Lrclib-Client': `SounDroid ${Build} (https://t.me/Musicapibot)`
       }
     })
     .then(res => res.json())

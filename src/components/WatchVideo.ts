@@ -8,7 +8,6 @@ import Selector from "./Selector";
 import { html, render } from 'uhtml';
 
 export default async function(dialog: HTMLDialogElement) {
-
   loadingScreen.showModal();
 
   const media = {
@@ -19,6 +18,7 @@ export default async function(dialog: HTMLDialogElement) {
   const audio = new Audio();
   const savedQ = state.watchMode;
 
+  // Check for AV1 support
   const supportsAv1 = await navigator.mediaCapabilities
     .decodingInfo({
       type: 'file',
@@ -32,20 +32,23 @@ export default async function(dialog: HTMLDialogElement) {
     })
     .then(result => result.supported);
 
-
+  // Get stream data
   const data = await getStreamData(store.actionsMenu.id) as unknown as Piped & {
     captions: Captions[],
     videoStreams: Record<'url' | 'type' | 'resolution', string>[]
   };
+
   const hasAv1 = data.videoStreams.find(v => v.type.includes('av01'))?.url;
   const hasVp9 = data.videoStreams.find(v => v.type.includes('vp9'))?.url;
   const hasOpus = data.audioStreams.find(a => a.mimeType.includes('opus'))?.url;
   const useOpus = hasOpus && await store.player.supportsOpus;
+
+  // Process audio streams
   const audioArray = handleXtags(data.audioStreams)
     .filter(a => a.mimeType.includes(useOpus ? 'opus' : 'mp4a'))
     .sort((a, b) => parseInt(a.bitrate) - parseInt(b.bitrate));
 
-
+  // Process video streams with codec filtering
   media.video = data.videoStreams
     .filter(f => {
       const av1 = hasAv1 && supportsAv1 && f.type.includes('av01');
@@ -57,8 +60,44 @@ export default async function(dialog: HTMLDialogElement) {
     })
     .map(f => ([f.resolution, f.url]));
 
-  media.captions = data.captions
+  media.captions = data.captions;
 
+  // Determine default resolution
+  let defaultResolution: string | null = null;
+  let defaultUrl: string | null = null;
+  
+  if (media.video.length) {
+    // Priority order for default resolution
+    const resolutionPriority = ['360p', '380p', '240p', '144p'];
+    
+    // 1. Check if user has a saved preference
+    if (savedQ) {
+      const savedOption = media.video.find(v => v[0] === savedQ);
+      if (savedOption) {
+        defaultResolution = savedQ;
+        defaultUrl = savedOption[1];
+      }
+    }
+    
+    // 2. If no saved preference or invalid, find best match from priority list
+    if (!defaultUrl) {
+      for (const res of resolutionPriority) {
+        const match = media.video.find(v => 
+          v[0].toLowerCase().includes(res.toLowerCase())
+        );
+        if (match) {
+          defaultResolution = match[0];
+          defaultUrl = match[1];
+          break;
+        }
+      }
+      
+      // 3. Fallback to first available if no matches found
+      if (!defaultUrl) {
+        [defaultResolution, defaultUrl] = media.video[0];
+      }
+    }
+  }
 
   function close() {
     audio.pause();
@@ -69,122 +108,106 @@ export default async function(dialog: HTMLDialogElement) {
   }
 
   const videoTemplate = html`
-
     <video
       ref=${(_: HTMLVideoElement) => video = _}
       controls
       poster=${generateImageUrl(store.actionsMenu.id, 'mq')}
       @play=${() => {
-      audio.play();
-      audio.currentTime = video.currentTime;
-    }}
-      @pause=${() => {
-      audio.pause();
-      audio.currentTime = video.currentTime;
-    }}
-      @ended=${() => {
-      if (!queuelist.childElementCount) return;
-      close();
-      store.queue.firstChild()?.click();
-    }}
-      @waiting=${() => {
-      if (!audio.paused)
-        audio.pause();
-    }}
-      @timeupdate=${() => {
-      const diff = audio.currentTime - video.currentTime;
-      const vpr = video.playbackRate;
-      const npr = vpr - diff;
-      if (npr < 0) return;
-      const rpr = Math.round(npr * 100) / 100;
-      if (rpr !== audio.playbackRate)
-        audio.playbackRate = rpr;
-
-    }}
-      @loadstart=${() => {
-      if (!audio.paused)
-        audio.pause();
-    }}
-      @playing=${() => {
-      if (audio.paused)
         audio.play();
-    }}
+        audio.currentTime = video.currentTime;
+      }}
+      @pause=${() => {
+        audio.pause();
+        audio.currentTime = video.currentTime;
+      }}
+      @ended=${() => {
+        if (!queuelist.childElementCount) return;
+        close();
+        store.queue.firstChild()?.click();
+      }}
+      @waiting=${() => {
+        if (!audio.paused) audio.pause();
+      }}
+      @timeupdate=${() => {
+        const diff = audio.currentTime - video.currentTime;
+        const vpr = video.playbackRate;
+        const npr = vpr - diff;
+        if (npr < 0) return;
+        const rpr = Math.round(npr * 100) / 100;
+        if (rpr !== audio.playbackRate) audio.playbackRate = rpr;
+      }}
+      @loadstart=${() => {
+        if (!audio.paused) audio.pause();
+      }}
+      @playing=${() => {
+        if (audio.paused) audio.play();
+      }}
       @seeked=${() => {
-      audio.currentTime = video.currentTime;
-    }}
+        audio.currentTime = video.currentTime;
+      }}
       @ratechange=${() => {
-      audio.playbackRate = video.playbackRate;
-    }}
+        audio.playbackRate = video.playbackRate;
+      }}
       @error=${() => {
-      if (video.src.endsWith('&fallback')) return;
-      const origin = new URL(video.src).origin;
+        if (video.src.endsWith('&fallback')) return;
+        const origin = new URL(video.src).origin;
 
-      if (store.api.index < store.api.invidious.length) {
-        const proxy = store.api.invidious[store.api.index];
-        video.src = video.src.replace(origin, proxy);
-        audio.src = audio.src.replace(origin, proxy);
-
-        store.api.index++;
-      }
-    }}
-
+        if (store.api.index < store.api.invidious.length) {
+          const proxy = store.api.invidious[store.api.index];
+          video.src = video.src.replace(origin, proxy);
+          audio.src = audio.src.replace(origin, proxy);
+          store.api.index++;
+        }
+      }}
     >
-      ${media.captions.length ?
-      html`
-          ${media.captions.map(v => html`
-            <track
-              src=${store.api.invidious[0] + v.url}
-              srclang=${v.label}
-            >
-            </track>
-          `)}
-        `: ''
-    }
+      ${media.captions.length ? html`
+        ${media.captions.map(v => html`
+          <track
+            src=${store.api.invidious[0] + v.url}
+            srclang=${v.label}
+          ></track>
+        `)}
+      ` : ''}
     </video>
-
   `;
 
   const footerTemplate = html`
-
     <div>
-
       <button @click=${close}>Close</button>
 
-      ${media.video.length ?
-      Selector({
+      ${media.video.length ? Selector({
         id: 'videoCodecSelector',
         label: '',
-        handler: (_) => {
-          video.src = proxyHandler(_.target.value, true);
+        handler: (e) => {
+          video.src = proxyHandler(e.target.value, true);
           video.currentTime = audio.currentTime;
-          if (savedQ)
-            setState('watchMode', _.target.selectedOptions[0].textContent as string);
+          setState('watchMode', e.target.selectedOptions[0].textContent as string);
         },
         children: html`
-              <option>Video</option>
-              ${media.video.map(f => html`
-                <option
-                 value=${f[1]}
-                 selected=${f[0] === savedQ}
-                 >${f[0]}</option>
-                `)
-          }`,
-        onmount: (_) => {
-          if (savedQ)
-            video.src = proxyHandler(_.value, true);
+          <option>Video</option>
+          ${media.video.map(f => html`
+            <option
+              value=${f[1]}
+              selected=${f[0] === defaultResolution}
+            >${f[0]}</option>
+          `)}
+        `,
+        onmount: (select) => {
+          if (defaultUrl) {
+            video.src = proxyHandler(defaultUrl, true);
+          }
         }
-      })
-      : ''}
+      }) : ''}
     
       <button @click=${() => {
-      player(store.actionsMenu.id);
-      close();
-    }}>Listen</button>
+        player(store.actionsMenu.id);
+        close();
+      }}>Listen</button>
 
-      <br/> <br/>
-      <i> Because video streaming consumes a lot of energy, contributing to carbon emissions, please try to watch only what's necessary. When you do stream, select the lowest resolution that meets your needs.</i>
+      <br/><br/>
+      <i>Because video streaming consumes a lot of energy, contributing to carbon emissions, please try to watch only what's necessary. When you do stream, select the lowest resolution that meets your needs.</i>
     </div>
-    `;
+  `;
 
   render(dialog, html`
     ${videoTemplate}

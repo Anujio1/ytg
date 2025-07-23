@@ -61,7 +61,7 @@ nav.addEventListener('click', (e: Event) => {
 
     document.title = (
       inHome ? homeTitle : routeName
-    ) + ' - ytify';
+    ) + ' - SounDroid';
 
   }
   showSection(anchor.id);

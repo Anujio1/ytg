@@ -1,5 +1,5 @@
 {
-  "name": "ytify",
+  "name": "SounDroid",
   "type": "module",
   "scripts": {
     "dev": "vite",

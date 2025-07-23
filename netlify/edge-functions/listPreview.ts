@@ -10,14 +10,14 @@ export default async (request: Request) => {
 <head>
   <meta charset="UTF-8">
   <meta name="description"
-    content="View ${type} in ytify">
+    content="View ${type} in SounDroid">
   <meta name="author" content="n-ce">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="${type} | ytify">
+  <meta property="og:title" content="${type} | SounDroid">
   <meta property="og:url" content="https://ytify.pp.ua">
-  <meta property="og:site_name" content="ytify">
-  <meta property="og:description" content="View ${id} - ${type} in ytify">
-  <title>${type} | ytify</title>
+  <meta property="og:site_name" content="SounDroid">
+  <meta property="og:description" content="View ${id} - ${type} in SounDroid">
+  <title>${type} | SounDroid</title>
 </head>
 <script>location.replace('/?e=' + encodeURI(location.pathname + location.search))</script></html>
     `, {
