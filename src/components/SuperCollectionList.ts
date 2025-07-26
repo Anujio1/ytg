@@ -136,7 +136,7 @@ const loadFeed = (db: Library) =>
     'You have not subscribed to any channels';
 
 
-const loadFeaturedPls = () => fetch('/ytm_pls.md')
+const loadFeaturedPls = () => fetch('https://raw.githubusercontent.com/Anujio1/ytg/main/ytm_pls.md')
   .then(res => res.text())
   .then(text => text.split('\n'))
   .then(data => {
