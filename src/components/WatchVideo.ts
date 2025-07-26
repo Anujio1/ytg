@@ -35,7 +35,8 @@ export default async function(dialog: HTMLDialogElement) {
   // Get stream data
   const data = await getStreamData(store.actionsMenu.id) as unknown as Piped & {
     captions: Captions[],
-    videoStreams: Record<'url' | 'type' | 'resolution', string>[]
+    videoStreams: Record<'url' | 'type' | 'resolution', string>[],
+    audioStreams: Record<'url' | 'mimeType' | 'bitrate', string>[]
   };
 
   const hasAv1 = data.videoStreams.find(v => v.type.includes('av01'))?.url;
@@ -57,6 +58,7 @@ export default async function(dialog: HTMLDialogElement) {
       if (vp9) return true;
       const avc = !hasVp9 && f.type.includes('avc1');
       if (avc) return true;
+      return false;
     })
     .map(f => ([f.resolution, f.url]));
 
@@ -65,11 +67,11 @@ export default async function(dialog: HTMLDialogElement) {
   // Determine default resolution
   let defaultResolution: string | null = null;
   let defaultUrl: string | null = null;
-  
+
   if (media.video.length) {
     // Priority order for default resolution
     const resolutionPriority = ['360p', '380p', '240p', '144p'];
-    
+
     // 1. Check if user has a saved preference
     if (savedQ) {
       const savedOption = media.video.find(v => v[0] === savedQ);
@@ -78,11 +80,11 @@ export default async function(dialog: HTMLDialogElement) {
         defaultUrl = savedOption[1];
       }
     }
-    
+
     // 2. If no saved preference or invalid, find best match from priority list
     if (!defaultUrl) {
       for (const res of resolutionPriority) {
-        const match = media.video.find(v => 
+        const match = media.video.find(v =>
           v[0].toLowerCase().includes(res.toLowerCase())
         );
         if (match) {
@@ -91,7 +93,7 @@ export default async function(dialog: HTMLDialogElement) {
           break;
         }
       }
-      
+
       // 3. Fallback to first available if no matches found
       if (!defaultUrl) {
         [defaultResolution, defaultUrl] = media.video[0];
@@ -192,13 +194,14 @@ export default async function(dialog: HTMLDialogElement) {
             >${f[0]}</option>
           `)}
         `,
-        onmount: (select) => {
+        // Fix: Remove unused 'select' parameter
+        onmount: () => {
           if (defaultUrl) {
             video.src = proxyHandler(defaultUrl, true);
           }
         }
       }) : ''}
-    
+
       <button @click=${() => {
         player(store.actionsMenu.id);
         close();
