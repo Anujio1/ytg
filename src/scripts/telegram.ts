@@ -1,7 +1,6 @@
-// src/scripts/telegram.ts
 export default function initTelegram() {
   // Safely check for Telegram WebApp environment
-  if (typeof window === 'undefined' || !(window as any).Telegram?.WebApp?.initDataUnsafe?.user) {
+  if (typeof window === 'undefined' || !(window as any).Telegram?.WebApp) {
     const profileContainer = document.getElementById('profile-container');
     if (profileContainer) profileContainer.style.display = 'none';
     return;
@@ -9,8 +8,67 @@ export default function initTelegram() {
 
   // Type assertion for TypeScript
   const telegram = (window as any).Telegram;
-  const user = telegram.WebApp.initDataUnsafe.user;
+  const tg = telegram.WebApp;
   
+  // Initialize Telegram Web App
+  tg.ready();
+  
+  // Handle start parameter for Mini App direct links
+  handleStartParameter(tg);
+  
+  // Handle user profile if available
+  if (tg.initDataUnsafe?.user) {
+    initUserProfile(tg.initDataUnsafe.user);
+  } else {
+    // Hide profile container if no user data
+    const profileContainer = document.getElementById('profile-container');
+    if (profileContainer) profileContainer.style.display = 'none';
+  }
+  
+  // Telegram-specific configurations
+  configureTelegramApp(tg);
+}
+
+function handleStartParameter(tg: any) {
+  try {
+    // Get the start parameter
+    const startParam = tg.initDataUnsafe?.start_param;
+    
+    if (startParam) {
+      // Check if we already have the 's' parameter in URL
+      const currentUrl = new URL(window.location.href);
+      const existingParam = currentUrl.searchParams.get('s');
+      
+      if (!existingParam) {
+        // Add the parameter to current URL
+        currentUrl.searchParams.set('s', startParam);
+        // Update URL without reload
+        window.history.replaceState({}, '', currentUrl.toString());
+        
+        // Store in window for other parts of the app to use
+        (window as any).telegramStartParam = startParam;
+        
+        // Dispatch custom event that other parts of your app can listen to
+        window.dispatchEvent(new CustomEvent('telegram-start-param', { 
+          detail: { param: startParam } 
+        }));
+      }
+    }
+    
+    // Store Telegram context
+    (window as any).telegramContext = {
+      isActive: true,
+      startParam: startParam,
+      chatType: tg.initDataUnsafe?.chat_type,
+      chatInstance: tg.initDataUnsafe?.chat_instance,
+      user: tg.initDataUnsafe?.user
+    };
+  } catch (error) {
+    console.error('Error handling Telegram start parameter:', error);
+  }
+}
+
+function initUserProfile(user: any) {
   try {
     // Get all required DOM elements
     const elements = {
@@ -56,16 +114,62 @@ export default function initTelegram() {
       elements.infoDialog?.close();
     });
 
-    // Expand the WebApp to full viewport
-    if (telegram.WebApp.expand) {
-      telegram.WebApp.expand();
-    }
-
   } catch (error) {
     console.error('Error initializing Telegram profile:', error);
     const container = document.getElementById('profile-container');
     if (container) container.style.display = 'none';
   }
+}
+
+function configureTelegramApp(tg: any) {
+  try {
+    // Expand the WebApp to full viewport
+    if (tg.expand) {
+      tg.expand();
+    }
+    
+    // Set header color to match your app (adjust color as needed)
+    if (tg.setHeaderColor) {
+      tg.setHeaderColor('#000000'); // or your app's header color
+    }
+    
+    // Enable closing confirmation if needed
+    // tg.enableClosingConfirmation();
+    
+    // Set background color if needed
+    if (tg.setBackgroundColor) {
+      tg.setBackgroundColor('#ffffff'); // or your app's background color
+    }
+    
+  } catch (error) {
+    console.error('Error configuring Telegram app:', error);
+  }
+}
+
+// Helper function to get start parameter (can be used by other modules)
+export function getTelegramStartParam(): string | null {
+  if (typeof window !== 'undefined') {
+    // First check if we have it in the URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const sParam = urlParams.get('s');
+    if (sParam) return sParam;
+    
+    // Check if we stored it
+    if ((window as any).telegramStartParam) {
+      return (window as any).telegramStartParam;
+    }
+    
+    // Try to get it directly from Telegram
+    if ((window as any).Telegram?.WebApp?.initDataUnsafe?.start_param) {
+      return (window as any).Telegram.WebApp.initDataUnsafe.start_param;
+    }
+  }
+  return null;
+}
+
+// Helper function to check if running in Telegram
+export function isInTelegram(): boolean {
+  return typeof window !== 'undefined' && !!(window as any).Telegram?.WebApp;
 }
 
 // Initialize when DOM is ready
